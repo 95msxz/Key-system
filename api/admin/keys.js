@@ -58,16 +58,17 @@ async function cleanupExpired(database) {
   const now = Date.now();
   const snap = await database.ref('keys').get();
   const updates = {};
+  const expiredOwners = [];
   snap.forEach((child) => {
     const value = child.val() || {};
     if (!Number(value.expiresAt) || Number(value.expiresAt) > now) return;
     updates[`keys/${child.key}`] = null;
-    if (value.ownerHash) {
-      const ownerRef = database.ref(`keyOwners/${value.ownerHash}`);
-      const ownerSnap = await ownerRef.get();
-      if (String(ownerSnap.val()?.key || '') === String(child.key)) updates[`keyOwners/${value.ownerHash}`] = null;
-    }
+    if (value.ownerHash) expiredOwners.push({ key: String(child.key), ownerHash: String(value.ownerHash) });
   });
+  await Promise.all(expiredOwners.map(async ({ key, ownerHash }) => {
+    const ownerSnap = await database.ref(`keyOwners/${ownerHash}`).get();
+    if (String(ownerSnap.val()?.key || '') === key) updates[`keyOwners/${ownerHash}`] = null;
+  }));
   if (Object.keys(updates).length) await database.ref().update(updates);
   return Object.keys(updates).filter((path) => path.startsWith('keys/')).length;
 }
