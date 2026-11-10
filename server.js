@@ -39,7 +39,7 @@ const directRoutes = [
 ];
 
 for (const [route, handler] of directRoutes) app.all(route, handler);
-app.all(/^\/api(?:\/.*)?$/, require('./api/[...route].js'));
+app.all(/^\/api(?:\/.*)?$/, (_req, res) => res.status(404).json({ error: 'Ruta API no encontrada.' }));
 
 app.use((_req, res) => res.status(404).json({ error: 'Ruta no encontrada.' }));
 app.use((error, _req, res, _next) => {
